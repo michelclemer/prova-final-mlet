@@ -1,0 +1,8 @@
+2025-05-15 20:32:06,962 - __main__ - INFO - Iniciando aplicação de previsão de ações...
+2025-05-15 20:32:06,963 - __main__ - INFO - Thread de monitoramento iniciado
+2025-05-15 20:32:06,963 - __main__ - INFO - Iniciando API em 0.0.0.0:8000
+2025-05-15 20:32:08,536 - __main__ - INFO - Iniciando monitoramento do modelo...
+2025-05-15 20:32:08,538 - src.monitoring.metrics - WARNING - Não há logs de previsão para coletar métricas
+2025-05-15 20:32:08,538 - src.monitoring.metrics - WARNING - Não há logs de previsão para coletar métricas
+2025-05-15 20:32:08,538 - src.monitoring.metrics - WARNING - Não há métricas para verificar drift
+2025-05-15 20:32:08,538 - __main__ - INFO - Status do monitoramento: unknown

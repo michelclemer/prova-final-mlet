@@ -1,128 +1,216 @@
-Projeto de Previsão de Ações - MLOps
-Este projeto implementa um sistema de previsão de preços de ações usando Prophet, seguindo as melhores práticas de MLOps para o deployment do modelo.
-Estrutura do Projeto
-stock-prediction/
-├── data/                      # Armazenamento de dados
-│   ├── raw/                   # Dados brutos
-│   └── processed/             # Dados processados
-├── models/                    # Modelos serializados
-├── notebooks/                 # Notebooks de análise
-│   └── exploratory.ipynb      # Análise exploratória
-├── src/                       # Código fonte
-│   ├── data/                  # Scripts de coleta e processamento de dados
-│   │   ├── collect.py         # Coleta dados da API
-│   │   └── process.py         # Processa os dados
-│   ├── models/                # Scripts de modelagem
-│   │   ├── train.py           # Treina o modelo
-│   │   └── predict.py         # Faz previsões
-│   ├── api/                   # API de serviço
-│   │   ├── main.py            # Ponto de entrada da API
-│   │   └── routers/           # Rotas da API
-│   └── monitoring/            # Scripts de monitoramento
-│       └── metrics.py         # Métricas de desempenho
-├── tests/                     # Testes
-├── .gitignore                 # Arquivos ignorados pelo Git
-├── requirements.txt           # Dependências
-├── Dockerfile                 # Para containerização
-├── docker-compose.yml         # Para orquestração
-└── README.md                  # Documentação principal
-Tecnologias Utilizadas
+# Modelo de Previsão da Bolsa de Valores - MLOps
 
-Python 3.9: Linguagem de programação
-Prophet: Algoritmo de séries temporais
-FastAPI: Framework para API
-Docker: Containerização
-Pandas/NumPy: Manipulação de dados
-yfinance: API para dados de ações
-scikit-learn: Métricas de avaliação
+Este projeto implementa um modelo preditivo para previsão de preços de ações na bolsa de valores, seguindo boas práticas de MLOps.
 
-Funcionalidades
+## Visão Geral
 
-Coleta de dados históricos de ações
-Processamento e preparação de dados
-Treinamento de modelo preditivo
-API RESTful para acesso às previsões
-Monitoramento de desempenho do modelo
-Containerização para deploy simplificado
+O sistema usa um modelo LSTM (Long Short-Term Memory) para prever o preço de fechamento de ações com base em dados históricos. A aplicação inclui uma API para servir as previsões, monitoramento do desempenho do modelo em produção e recursos para retreinamento automático quando necessário.
 
-Fluxo de MLOps Implementado
-O projeto segue as melhores práticas de MLOps:
+## Funcionalidades
 
-Coleta de Dados: Automatizada usando a API do Yahoo Finance
-Processamento de Dados: Tratamento, feature engineering e divisão em treino/teste
-Treinamento do Modelo: Utilização do Prophet para previsão de séries temporais
-Avaliação de Modelo: Métricas como MAE, RMSE, MAPE para validação
-Serialização: Modelo salvo em formato pickle
-Deploy: Exposição via API RESTful usando FastAPI
-Monitoramento: Acompanhamento contínuo do desempenho do modelo
-Containerização: Docker para simplificar o deploy e replicabilidade
+- Coleta de dados históricos da bolsa de valores usando a API do Yahoo Finance
+- Pré-processamento de dados para treinar o modelo LSTM
+- Treinamento e avaliação do modelo com métricas relevantes
+- API REST para servir previsões (implementada com FastAPI)
+- Monitoramento do desempenho do modelo em produção
+- Detecção de drift e retreinamento automático quando necessário
+- Containerização com Docker para facilitar a implantação
 
-Principais Endpoints da API
+## Estrutura do Projeto
 
-GET /: Status da API
-GET /health: Verificação de saúde da API
-GET /model/info: Informações sobre o modelo atual
-GET /predict/next: Previsões para os próximos dias
-GET /predict/date: Previsão para uma data específica
-GET /predict/range: Previsões para um intervalo de datas
+```
+.
+├── app.py                  # Ponto de entrada principal da aplicação
+├── data/                   # Diretório para armazenar dados
+│   ├── raw/                # Dados brutos coletados
+│   └── processed/          # Dados processados para o modelo
+├── models/                 # Diretório para armazenar modelos treinados
+├── monitoring/             # Diretório para armazenar dados de monitoramento
+├── reports/                # Relatórios, gráficos e métricas
+│   └── figures/            # Visualizações geradas
+├── src/                    # Código fonte da aplicação
+│   ├── api/                # Módulos da API REST
+│   │   ├── main.py         # Implementação da API FastAPI
+│   │   └── routers.py      # Rotas adicionais
+│   ├── data/               # Módulos para processamento de dados
+│   │   ├── collect_data.py # Coleta de dados
+│   │   └── process.py      # Pré-processamento
+│   ├── models/             # Módulos para modelo de ML
+│   │   ├── train.py        # Treinamento do modelo
+│   │   ├── predict.py      # Previsão com modelo treinado
+│   │   └── evaluate_model.py  # Avaliação do modelo
+│   └── monitoring/         # Módulos para monitoramento
+│       └── metrics.py      # Monitoramento e métricas
+├── test/                   # Testes unitários e de integração
+├── logs/                   # Logs da aplicação
+├── Dockerfile              # Dockerfile para containerização
+├── docker-compose.yml      # Configuração Docker Compose
+├── requirements.txt        # Dependências do projeto
+├── .env                    # Variáveis de ambiente
+└── README.md               # Este arquivo
+```
 
-Como Executar
-Requisitos
+## Requisitos
 
-Python 3.9+
-Docker e Docker Compose (opcional)
+- Python 3.9+
+- Bibliotecas listadas em requirements.txt
 
-Instalação Local
+## Instalação
 
-Clone o repositório:
-bashgit clone https://github.com/seu-usuario/stock-prediction.git
-cd stock-prediction
+1. Clone o repositório:
+```
+git clone https://github.com/seu-usuario/stock-prediction-mlops.git
+cd stock-prediction-mlops
+```
 
-Instale as dependências:
-bashpip install -r requirements.txt
+2. Crie um ambiente virtual e instale as dependências:
+```
+python -m venv venv
+source venv/bin/activate  # No Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-Execute o fluxo completo:
-bash# Coletar dados
-python -m src.data.collect
+3. Configure as variáveis de ambiente:
+```
+cp .env.example .env
+# Edite o arquivo .env conforme necessário
+```
 
-# Processar dados
-python -m src.data.process
+## Uso
 
-# Treinar modelo
-python -m src.models.train
+### Treinamento do Modelo
 
-# Iniciar API
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+Para treinar o modelo com dados históricos de uma ação específica:
 
+```
+python -m src.models.train --symbol AAPL
+```
 
-Execução com Docker
+### Iniciando a API
 
-Construa e inicie o container:
-bashdocker-compose up -d
+Para iniciar a API de previsão:
 
-Acesse a API em http://localhost:8000
-Para encerrar:
-bashdocker-compose down
+```
+python app.py
+```
 
+Ou, para configurar o modelo antes de iniciar a API:
 
-Monitoramento
-O monitoramento do modelo é realizado através de logs de previsões e métricas de desempenho. Os principais indicadores monitorados são:
+```
+python app.py --setup
+```
 
-MAPE (Mean Absolute Percentage Error): Mede a acurácia percentual das previsões
-MAE (Mean Absolute Error): Mede o erro absoluto médio
-RMSE (Root Mean Squared Error): Mede o erro quadrático médio
-Drift Detection: Detecta mudanças no desempenho do modelo ao longo do tempo
+Para forçar o treinamento do modelo antes de iniciar a API:
 
-Futuros Melhoramentos
+```
+python app.py --train
+```
 
-Implementação de alertas para degradação de modelo
-Pipeline de retreinamento automático
-Interface web para visualização de previsões
-Suporte a múltiplos modelos e comparação
-Testes automatizados mais abrangentes
-CI/CD para automação completa
+Para habilitar o monitoramento em tempo real:
 
-Licença
-Este projeto está licenciado sob a MIT License.
-Autor
-Este projeto foi desenvolvido como parte da avaliação da pós-graduação em Machine Learning Engineering.
+```
+python app.py --monitoring
+```
+
+### Docker
+
+Para iniciar o sistema usando Docker:
+
+```
+docker-compose up -d
+```
+
+## API Endpoints
+
+A API oferece os seguintes endpoints:
+
+- `GET /`: Informações básicas da API
+- `GET /health`: Verificação de status da API
+- `GET /model/info`: Informações sobre o modelo atual
+- `GET /predict/next`: Previsões para os próximos dias
+- `GET /predict/date`: Previsão para uma data específica
+- `GET /predict/range`: Previsões para um intervalo de datas
+- `POST /predict`: Previsões com parâmetros personalizados
+- `GET /monitoring/metrics`: Métricas de monitoramento
+- `GET /monitoring/drift`: Verificação de drift no modelo
+- `POST /monitoring/update`: Atualiza monitoramento com dados recentes
+- `POST /retrain`: Retreina o modelo com dados atualizados
+
+## Monitoramento
+
+O sistema de monitoramento acompanha:
+
+- Precisão das previsões comparadas com valores reais
+- Detecção de drift no modelo
+- Métricas de desempenho (MAPE, RMSE, MAE, etc.)
+
+## MLOps
+
+A implementação segue as melhores práticas de MLOps, incluindo:
+
+- Versionamento de código e modelos
+- Automação do pipeline de dados e treinamento
+- API para servir modelos
+- Monitoramento de modelos em produção
+- Retreinamento automático
+- Containerização para implantação reproduzível
+
+## Modelo LSTM
+
+O modelo LSTM (Long Short-Term Memory) é uma arquitetura de rede neural recorrente especialmente adequada para prever séries temporais, como preços de ações. A implementação usa:
+
+- 60 dias de histórico como janela de tempo para prever o próximo dia
+- Duas camadas LSTM com 50 unidades cada, com dropout para prevenir overfitting
+- Camadas densas para a saída
+- Normalização de dados para melhorar o treinamento
+- Divisão treino/teste de 80/20
+- Early stopping para prevenir overfitting
+
+## Avaliação do Modelo
+
+O modelo é avaliado usando várias métricas:
+
+- MSE (Erro Quadrático Médio)
+- RMSE (Raiz do Erro Quadrático Médio)
+- MAE (Erro Absoluto Médio)
+- MAPE (Erro Percentual Absoluto Médio)
+- R² (Coeficiente de Determinação)
+
+## Exemplo de Resposta da API
+
+Quando você faz uma solicitação para `/predict/next`, a resposta tem o seguinte formato:
+
+```json
+[
+  {
+    "date": "2025-05-16",
+    "predicted_price": 178.45,
+    "lower_bound": 169.53,
+    "upper_bound": 187.37
+  },
+  {
+    "date": "2025-05-19",
+    "predicted_price": 180.23,
+    "lower_bound": 171.22,
+    "upper_bound": 189.24
+  },
+  ...
+]
+```
+
+## Troubleshooting
+
+Se você encontrar problemas, verifique:
+
+1. Logs da aplicação em `logs/app.log`
+2. Certifique-se de que todas as dependências estão instaladas
+3. Confirme se todos os diretórios necessários existem
+4. Verifique se a API do Yahoo Finance está funcionando corretamente
+
+## Contribuindo
+
+Contribuições são bem-vindas! Por favor, abra uma issue para discutir suas ideias ou envie um pull request.
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT.

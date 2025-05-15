@@ -4,23 +4,19 @@ Módulo para treinamento do modelo LSTM para previsão de preços de ações.
 import os
 import logging
 import numpy as np
-import mlflow
-import mlflow.keras
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from dotenv import load_dotenv
-
-# Carregar variáveis de ambiente
-load_dotenv()
+from datetime import datetime
+import joblib
 
 # Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
-
-# Configurar MLflow
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", ""))
-mlflow_experiment = os.getenv("MLFLOW_EXPERIMENT", "stock-prediction")
-mlflow.set_experiment(mlflow_experiment)
 
 
 def build_model(input_shape):
@@ -53,7 +49,8 @@ def train_model(
         y_test=None,
         model_path=None,
         batch_size=32,
-        epochs=100
+        epochs=100,
+        symbol="AAPL"
 ):
     """
     Treina um modelo LSTM para previsão de preços de ações.
@@ -66,16 +63,21 @@ def train_model(
         model_path (str): Caminho para salvar o modelo treinado.
         batch_size (int): Tamanho do batch para treinamento.
         epochs (int): Número máximo de épocas para treinamento.
+        symbol (str): Símbolo da ação.
 
     Returns:
         tensorflow.keras.models.Sequential: Modelo LSTM treinado.
     """
     # Usar valores padrão se não fornecidos
-    symbol = os.getenv("STOCK_SYMBOL", "AAPL")
     data_dir = os.path.join("data", "processed")
-    model_path = model_path or os.path.join("models", f"{symbol}_model.h5")
+
+    if model_path is None:
+        model_path = os.path.join("models", f"{symbol}_model.h5")
 
     try:
+        # Certificar que o diretório models existe
+        os.makedirs("models", exist_ok=True)
+
         # Carregar dados se não fornecidos
         if X_train is None:
             X_train = np.load(f"{data_dir}/{symbol}_processed_X_train.npy")
@@ -91,56 +93,55 @@ def train_model(
         X_train = X_train.reshape(X_train.shape[0], timesteps, features)
         X_test = X_test.reshape(X_test.shape[0], timesteps, features)
 
-        # Criar diretório para salvar o modelo
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        # Construir o modelo
+        model = build_model((timesteps, features))
+        model.summary()
 
-        with mlflow.start_run():
-            # Registrar parâmetros
-            mlflow.log_param("batch_size", batch_size)
-            mlflow.log_param("epochs", epochs)
-            mlflow.log_param("timesteps", timesteps)
-            mlflow.log_param("features", features)
-            mlflow.log_param("stock_symbol", symbol)
+        # Callbacks para treinamento
+        callbacks = [
+            EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
+            ModelCheckpoint(filepath=model_path, monitor='val_loss', save_best_only=True)
+        ]
 
-            # Construir o modelo
-            model = build_model((timesteps, features))
-            model.summary()
+        # Treinar o modelo
+        logger.info(f"Iniciando treinamento do modelo para {symbol}")
+        history = model.fit(
+            X_train, y_train,
+            batch_size=batch_size,
+            epochs=epochs,
+            validation_data=(X_test, y_test),
+            callbacks=callbacks,
+            verbose=1
+        )
 
-            # Callbacks para treinamento
-            callbacks = [
-                EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
-                ModelCheckpoint(filepath=model_path, monitor='val_loss', save_best_only=True)
-            ]
+        # Avaliar o modelo no conjunto de teste
+        test_loss = model.evaluate(X_test, y_test, verbose=0)
+        logger.info(f"Loss no conjunto de teste: {test_loss}")
 
-            # Treinar o modelo
-            logger.info(f"Iniciando treinamento do modelo para {symbol}")
-            history = model.fit(
-                X_train, y_train,
-                batch_size=batch_size,
-                epochs=epochs,
-                validation_data=(X_test, y_test),
-                callbacks=callbacks,
-                verbose=1
-            )
+        # Salvar informações do treinamento
+        training_info = {
+            'symbol': symbol,
+            'train_samples': len(X_train),
+            'test_samples': len(X_test),
+            'epochs_trained': len(history.history['loss']),
+            'final_loss': history.history['loss'][-1],
+            'final_val_loss': history.history['val_loss'][-1],
+            'test_loss': test_loss,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
 
-            # Avaliar o modelo no conjunto de teste
-            test_loss = model.evaluate(X_test, y_test, verbose=0)
-            logger.info(f"Loss no conjunto de teste: {test_loss}")
+        # Salvar informações do treinamento
+        info_path = os.path.join("models", f"{symbol}_training_info.pkl")
+        joblib.dump(training_info, info_path)
 
-            # Registrar métricas
-            mlflow.log_metric("test_loss", test_loss)
-            for epoch, value in enumerate(history.history['loss']):
-                mlflow.log_metric("train_loss", value, step=epoch)
+        # Salvar histórico de treinamento
+        history_path = os.path.join("models", f"{symbol}_history.pkl")
+        joblib.dump(history.history, history_path)
 
-            for epoch, value in enumerate(history.history['val_loss']):
-                mlflow.log_metric("val_loss", value, step=epoch)
+        logger.info(f"Modelo salvo em {model_path}")
+        logger.info(f"Informações do treinamento salvas em {info_path}")
 
-            # Registrar o modelo no MLflow
-            mlflow.keras.log_model(model, "model")
-
-            logger.info(f"Modelo salvo em {model_path}")
-
-            return model
+        return model
 
     except Exception as e:
         logger.error(f"Erro no treinamento do modelo: {e}")
@@ -150,7 +151,30 @@ def train_model(
 def main():
     """Função principal para execução direta do script."""
     try:
-        train_model()
+        # Definir o símbolo da ação
+        symbol = "AAPL"  # Apple como exemplo
+
+        # Verificar se existem dados processados
+        processed_dir = os.path.join("data", "processed")
+        X_train_path = f"{processed_dir}/{symbol}_processed_X_train.npy"
+
+        if not os.path.exists(X_train_path):
+            # Se os dados processados não existirem, executar pré-processamento
+            from process import preprocess_data
+
+            # Verificar se existem dados brutos
+            raw_dir = "data/raw"
+            if not os.path.exists(raw_dir) or len([f for f in os.listdir(raw_dir) if f.startswith(symbol)]) == 0:
+                # Se os dados brutos não existirem, baixar dados
+                from collect_data import download_stock_data
+                download_stock_data(symbol)
+
+            # Pré-processar dados
+            preprocess_data(symbol=symbol)
+
+        # Treinar modelo
+        train_model(symbol=symbol)
+
         logger.info("Treinamento do modelo concluído com sucesso!")
     except Exception as e:
         logger.error(f"Falha no treinamento do modelo: {e}")
